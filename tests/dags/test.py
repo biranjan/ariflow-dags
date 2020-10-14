@@ -1,25 +1,55 @@
-import datetime as dt
-
+"""
+Code that goes along with the Airflow located at:
+http://airflow.readthedocs.org/en/latest/tutorial.html
+"""
 from airflow import DAG
-#from airflow.operators.bash_operator import BashOperator
-from airflow.contrib.hooks.ssh_hook import SSHHook
-from airflow.contrib.operators.ssh_operator import SSHOperator
+from airflow.operators.bash_operator import BashOperator
+from datetime import datetime, timedelta
 
-sshHook = SSHHook(ssh_conn_id='test_server')
+
 default_args = {
-    'owner':'airflow',
-    'start_date': dt.datetime.now(),
-    'concurreny': 1,
-    'retries':0
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2015, 6, 1),
+    'email': ['airflow@example.com'],
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+    # 'queue': 'bash_queue',
+    # 'pool': 'backfill',
+    # 'priority_weight': 10,
+    # 'end_date': datetime(2016, 1, 1),
 }
 
 dag = DAG(
-    'bash_dag', default_args=default_args,\
-     schedule_interval= '*/15 * * * *')
+    'tutorial', default_args=default_args, schedule_interval=timedelta(1))
 
-bash_task = SSHOperator( task_id='create_file',
-    ssh_hook=sshHook,
-    command='touch /home/biranjan/airflow.txt && \
-     echo "try" >> airflow.txt',
+# t1, t2 and t3 are examples of tasks created by instantiating operators
+t1 = BashOperator(
+    task_id='print_date',
+    bash_command='date',
     dag=dag)
 
+t2 = BashOperator(
+    task_id='sleep',
+    bash_command='sleep 5',
+    retries=3,
+    dag=dag)
+
+templated_command = """
+    {% for i in range(5) %}
+        echo "{{ ds }}"
+        echo "{{ macros.ds_add(ds, 7)}}"
+        echo "{{ params.my_param }}"
+    {% endfor %}
+"""
+
+t3 = BashOperator(
+    task_id='templated',
+    bash_command=templated_command,
+    params={'my_param': 'Parameter I passed in'},
+    dag=dag)
+
+t2.set_upstream(t1)
+t
