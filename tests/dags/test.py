@@ -52,4 +52,3 @@ t3 = BashOperator(
     dag=dag)
 
 t2.set_upstream(t1)
-t
